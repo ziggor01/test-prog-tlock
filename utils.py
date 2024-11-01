@@ -2,6 +2,7 @@
 
 import csv
 from datetime import datetime
+import subprocess
 from ldap3 import Server, Connection, ALL, MODIFY_REPLACE
 import threading
 import tkinter as tk  # Додаємо цей імпорт для коректної роботи з tkinter
@@ -19,6 +20,13 @@ def set_ldap_config(ldap_server, username, password, base_dn):
     USERNAME = username
     PASSWORD = password
     BASE_DN = base_dn
+
+# Функція для запуску синхронізації Entra ID
+def sync_entra_id():
+    try:
+        subprocess.run(["powershell", "-Command", "Start-ADSyncSyncCycle -PolicyType Delta"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error synchronizing Entra ID: {str(e)}")
 
 # Імена файлів для збереження логів
 LOG_TXT_FILE = 'event_log.txt'
@@ -65,13 +73,16 @@ def block_account(account_name, scheduled_time, log_text):
         
         if conn.entries:
             user_dn = conn.entries[0].entry_dn
-            conn.modify(user_dn, {'userAccountControl': [(MODIFY_REPLACE, [0x0002])]})
+            conn.modify(user_dn, {'userAccountControl': [(MODIFY_REPLACE, [0x0002])]} )
             log_event(log_text, f"Account '{account_name}' was blocked successfully.")
             # Оновлюємо статус завдання
             for task in scheduled_tasks:
                 if task['account'] == account_name and task['scheduled_time'] == scheduled_time:
                     task['status'] = 'Completed'
                     break
+
+            # Виконуємо синхронізацію Entra ID
+            sync_entra_id()
             return "Account blocked successfully."
         else:
             log_event(log_text, f"Account '{account_name}' not found.")
