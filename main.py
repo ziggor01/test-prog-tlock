@@ -4,10 +4,21 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from datetime import datetime
 from tkcalendar import DateEntry
-from utils import log_event, schedule_block, get_scheduled_tasks, clean_completed_tasks, search_accounts, set_ldap_config
+from utils import (
+    log_event, schedule_block, get_scheduled_tasks,
+    clean_completed_tasks, search_accounts, set_ldap_config,
+    ConfigurationManager, create_directories, load_configurations_from_file,
+    save_configurations_to_file
+)
 from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import threading
+import os
+import logging
+
+# Глобальні змінні
+task_listbox = None  # Змінна для зберігання Listbox
+config_manager = ConfigurationManager()  # Ініціалізація менеджера конфігурацій
 
 # Функція для створення іконки для трея
 def create_image():
@@ -38,7 +49,6 @@ def update_account_names(event=None):
         account_names = search_accounts(partial_name)
         account_name_entry['values'] = account_names
 
-
 # Функція для збереження налаштувань LDAP
 def save_ldap_settings():
     ldap_server = ldap_server_entry.get()
@@ -55,11 +65,11 @@ def save_ldap_settings():
 
 # Функція для оновлення списку запланованих завдань
 def update_scheduled_tasks():
-    task_listbox.delete(0, tk.END)
+    task_listbox.delete(0, tk.END)  # Очистити старі завдання
     for task in get_scheduled_tasks():
         if task['status'] == 'Active':
             formatted_time = task['scheduled_time'].strftime('%Y-%m-%d %H:%M')
-            task_listbox.insert(tk.END, f"{task['account']} - {formatted_time}")
+            task_listbox.insert(tk.END, f"{task['account']} - {formatted_time}")  # Додаємо нові завдання
 
 # Функція для періодичного оновлення списку завдань
 def refresh_scheduled_tasks():
@@ -100,10 +110,13 @@ root = tk.Tk()
 
 # Встановлення іконки для вікна та панелі завдань
 root.iconbitmap("app_icon.ico")
-
-# Створення GUI
-root = tk.Tk()
 root.title("Schedule Block AD Account")
+
+# Створення директорій
+create_directories()
+
+# Завантаження конфігурацій
+load_configurations_from_file(config_manager)
 
 # Поля для введення налаштувань LDAP
 tk.Label(root, text="LDAP Configuration").pack(pady=5)
@@ -156,16 +169,22 @@ minimize_button.pack(pady=5)
 
 # Поле для відображення журналу подій
 tk.Label(root, text="Event Log:").pack(pady=5)
-log_text = tk.Text(root, width=50, height=10, state='disabled')
+log_text = tk.Text(root, width=50, height=15)
 log_text.pack(pady=5)
 
-# Поле для відображення запланованих завдань
+# Додайте Listbox для відображення запланованих завдань
 tk.Label(root, text="Scheduled Tasks:").pack(pady=5)
-task_listbox = tk.Listbox(root, width=50, height=10)
+task_listbox = tk.Listbox(root, width=50, height=10)  # Додаємо Listbox до інтерфейсу
 task_listbox.pack(pady=5)
 
-# Початкове оновлення списку запланованих завдань
-update_scheduled_tasks()
-root.after(5000, refresh_scheduled_tasks)
+# Запуск оновлення списку завдань
+refresh_scheduled_tasks()
 
+# Логування подій
+logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+
+# Запуск головного циклу програми
 root.mainloop()
+
+# Збереження конфігурацій перед виходом
+save_configurations_to_file(config_manager)

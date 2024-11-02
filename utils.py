@@ -6,6 +6,86 @@ import subprocess
 from ldap3 import Server, Connection, ALL, MODIFY_REPLACE
 import threading
 import tkinter as tk  # Додаємо цей імпорт для коректної роботи з tkinter
+import os
+import json
+import logging
+from cryptography.fernet import Fernet  # type: ignore
+
+# Налаштування журналювання
+logging.basicConfig(filename='app.log', level=logging.INFO)
+
+class ConfigurationManager:
+    def __init__(self):
+        self.configurations = {}
+        self.key = self.load_or_generate_key()  # Завантаження ключа або генерація нового
+
+    def load_or_generate_key(self):
+        """Завантаження ключа з файлу або генерація нового"""
+        key_file = 'configurations/key.key'
+        if os.path.exists(key_file):
+            with open(key_file, 'rb') as f:
+                return f.read()
+        else:
+            key = Fernet.generate_key()
+            with open(key_file, 'wb') as f:
+                f.write(key)
+            return key
+
+    def add_configuration(self, name, config_data):
+        """Додавання нової конфігурації"""
+        encrypted_data = self.encrypt_data(json.dumps(config_data))
+        self.configurations[name] = encrypted_data
+        logging.info(f"Configuration '{name}' added.")
+
+    def encrypt_data(self, data):
+        """Шифрування даних"""
+        f = Fernet(self.key)
+        encrypted_data = f.encrypt(data.encode())
+        return encrypted_data
+
+    def get_configurations(self):
+        """Отримання всіх конфігурацій"""
+        return {name: self.decrypt_data(data) for name, data in self.configurations.items()}
+
+    def decrypt_data(self, encrypted_data):
+        """Дешифрування даних"""
+        f = Fernet(self.key)
+        decrypted_data = f.decrypt(encrypted_data).decode()
+        return decrypted_data
+
+    def delete_configuration(self, name):
+        """Видалення конфігурації за назвою"""
+        if name in self.configurations:
+            del self.configurations[name]
+            logging.info(f"Configuration '{name}' deleted.")
+
+# Функція для створення папок
+def create_directories():
+    os.makedirs("configurations", exist_ok=True)
+    os.makedirs("modules", exist_ok=True)
+    os.makedirs("updates", exist_ok=True)
+    logging.info("Directories created.")
+
+# Збереження конфігурацій у файл
+def save_configurations_to_file(manager, filename='configurations/configs.json'):
+    with open(filename, 'w') as f:
+        json.dump(manager.configurations, f)
+    logging.info("Configurations saved to file.")
+
+# Завантаження конфігурацій з файлу
+def load_configurations_from_file(manager, filename='configurations/configs.json'):
+    if os.path.exists(filename):
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+                manager.configurations = {name: data[name] for name in data}
+            logging.info("Configurations loaded from file.")
+        except json.JSONDecodeError as e:
+            logging.error(f"Error loading configurations from file: {e}")
+            print("Error: The configuration file is not valid JSON or is empty.")
+    else:
+        logging.warning("Configuration file does not exist.")
+        print("Warning: Configuration file not found.")
 
 # Глобальні змінні для налаштувань LDAP
 LDAP_SERVER = ''
@@ -20,13 +100,14 @@ def set_ldap_config(ldap_server, username, password, base_dn):
     USERNAME = username
     PASSWORD = password
     BASE_DN = base_dn
+    logging.info("LDAP configuration set.")
 
 # Функція для запуску синхронізації Entra ID
 def sync_entra_id():
     try:
         subprocess.run(["powershell", "-Command", "Start-ADSyncSyncCycle -PolicyType Delta"], check=True)
     except subprocess.CalledProcessError as e:
-        print(f"Error synchronizing Entra ID: {str(e)}")
+        logging.error(f"Error synchronizing Entra ID: {str(e)}")
 
 # Імена файлів для збереження логів
 LOG_TXT_FILE = 'event_log.txt'
@@ -45,7 +126,7 @@ def search_accounts(partial_name):
         
         account_names = [entry.sAMAccountName.value for entry in conn.entries]
     except Exception as ex:
-        print(f"Error searching accounts: {str(ex)}")
+        logging.error(f"Error searching accounts: {str(ex)}")
     
     return account_names
 
@@ -116,3 +197,4 @@ def get_scheduled_tasks():
 def clean_completed_tasks():
     global scheduled_tasks
     scheduled_tasks = [task for task in scheduled_tasks if task['status'] != 'Completed']
+    logging.info("Cleaned up completed tasks.")
