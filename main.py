@@ -5,6 +5,31 @@ from tkinter import messagebox, ttk
 from datetime import datetime
 from tkcalendar import DateEntry
 from utils import log_event, schedule_block, get_scheduled_tasks, clean_completed_tasks, search_accounts, set_ldap_config
+from pystray import Icon, Menu, MenuItem
+from PIL import Image, ImageDraw
+import threading
+
+# Функція для створення іконки для трея
+def create_image():
+    image = Image.new('RGB', (64, 64), color=(0, 128, 255))  # блакитний фон іконки
+    d = ImageDraw.Draw(image)
+    d.rectangle((10, 10, 54, 54), fill=(255, 255, 0))  # жовтий квадрат
+    return image
+
+# Функція для виходу з програми через меню трея
+def on_exit(icon, item):
+    icon.stop()
+    root.quit()
+
+# Налаштування іконки для трея
+def setup_tray():
+    icon = Icon("MyApp", create_image(), menu=Menu(MenuItem("Вийти", on_exit)))
+    icon.run()
+
+# Функція для згорнення вікна в трей
+def hide_window():
+    root.withdraw()  # Приховує головне вікно
+    threading.Thread(target=setup_tray).start()  # Запускає трей у фоновому потоці
 
 # Функція для оновлення списку імен акаунтів
 def update_account_names(event=None):
@@ -124,6 +149,10 @@ time_combobox.pack(pady=5)
 # Кнопка для запланування блокування
 block_button = tk.Button(root, text="Schedule Block Account", command=confirm_and_schedule_block)
 block_button.pack(pady=20)
+
+# Кнопка для згорнення програми в трей
+minimize_button = tk.Button(root, text="Згорнути в трей", command=hide_window)
+minimize_button.pack(pady=5)
 
 # Поле для відображення журналу подій
 tk.Label(root, text="Event Log:").pack(pady=5)
