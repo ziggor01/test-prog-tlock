@@ -70,6 +70,12 @@ def schedule_block_account():
     else:
         messagebox.showwarning("Warning", "Please enter an account name and a valid time.")
 
+# Створення головного вікна
+root = tk.Tk()
+
+# Встановлення іконки для вікна та панелі завдань
+root.iconbitmap("app_icon.ico")
+
 # Створення GUI
 root = tk.Tk()
 root.title("Schedule Block AD Account")
