@@ -46,7 +46,19 @@ def save_ldap_settings():
         messagebox.showwarning("Warning", "Please fill in all LDAP fields.")
         return
     
+    # Зберегти налаштування LDAP
     set_ldap_config(ldap_server, username, password, base_dn)
+    
+    # Зберегти налаштування у файл
+    config_data = {
+        "ldap_server": ldap_server,
+        "username": username,
+        "password": password,
+        "base_dn": base_dn
+    }
+    config_manager.add_configuration("LDAPSettings", config_data)  # Додати конфігурацію
+    save_configurations_to_file(config_manager)  # Зберегти у файл
+
     messagebox.showinfo("Info", "LDAP settings saved successfully.")
 
 # Функція для оновлення списку запланованих завдань
@@ -99,7 +111,7 @@ create_directories()
 load_configurations_from_file(config_manager)
 
 # Встановлення іконки для вікна та панелі завдань
-root.iconbitmap("app_icon.ico")
+#root.iconbitmap("app_icon.ico")
 root.title("Schedule Block AD Account")
 
 # Поля для введення налаштувань LDAP

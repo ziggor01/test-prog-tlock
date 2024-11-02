@@ -12,7 +12,9 @@ import logging
 from cryptography.fernet import Fernet  # type: ignore
 
 # Налаштування журналювання
-logging.basicConfig(filename='app.log', level=logging.INFO)
+log_dir = 'logs'
+os.makedirs(log_dir, exist_ok=True)  # Створити папку logs, якщо вона не існує
+logging.basicConfig(filename=os.path.join(log_dir, 'app.log'), level=logging.INFO)
 
 class ConfigurationManager:
     def __init__(self):
@@ -71,6 +73,7 @@ def create_directories():
     os.makedirs("configurations", exist_ok=True)
     os.makedirs("modules", exist_ok=True)
     os.makedirs("updates", exist_ok=True)
+    os.makedirs("logs", exist_ok=True)
     logging.info("Directories created.")
 
 # Збереження конфігурацій у файл
@@ -89,6 +92,19 @@ def load_configurations_from_file(manager, filename='configurations/configs.json
             with open(filename, 'r') as f:
                 data = json.load(f)
                 manager.configurations = {name: data[name] for name in data}
+                
+                # Завантажуємо налаштування LDAP, якщо вони є
+                if "LDAPSettings" in manager.configurations:
+                    ldap_settings = json.loads(manager.get_configurations()["LDAPSettings"])
+                    ldap_server_entry.delete(0, tk.END)
+                    ldap_server_entry.insert(0, ldap_settings["ldap_server"])
+                    username_entry.delete(0, tk.END)
+                    username_entry.insert(0, ldap_settings["username"])
+                    password_entry.delete(0, tk.END)
+                    password_entry.insert(0, ldap_settings["password"])
+                    base_dn_entry.delete(0, tk.END)
+                    base_dn_entry.insert(0, ldap_settings["base_dn"])
+                
             logging.info("Configurations loaded from file.")
         except json.JSONDecodeError as e:
             logging.error(f"Error loading configurations from file: {e}")
@@ -99,6 +115,7 @@ def load_configurations_from_file(manager, filename='configurations/configs.json
     else:
         logging.warning("Configuration file does not exist.")
         print("Warning: Configuration file not found.")
+
 
 # Глобальні змінні для налаштувань LDAP
 LDAP_SERVER = ''
@@ -123,8 +140,8 @@ def sync_entra_id():
         logging.error(f"Error synchronizing Entra ID: {str(e)}")
 
 # Імена файлів для збереження логів
-LOG_TXT_FILE = 'event_log.txt'
-LOG_CSV_FILE = 'event_log.csv'
+LOG_TXT_FILE = 'logs/event_log.txt'
+LOG_CSV_FILE = 'logs/event_log.csv'
 
 # Список для запланованих завдань
 scheduled_tasks = []
