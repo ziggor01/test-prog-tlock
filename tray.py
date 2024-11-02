@@ -1,3 +1,4 @@
+from logging import root
 import tkinter as tk
 from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw

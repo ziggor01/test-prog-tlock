@@ -5,7 +5,7 @@ from datetime import datetime
 import subprocess
 from ldap3 import Server, Connection, ALL, MODIFY_REPLACE
 import threading
-import tkinter as tk  # Додаємо цей імпорт для коректної роботи з tkinter
+import tkinter as tk
 import os
 import json
 import logging
@@ -20,19 +20,23 @@ class ConfigurationManager:
         self.key = self.load_or_generate_key()  # Завантаження ключа або генерація нового
 
     def load_or_generate_key(self):
-    """Завантаження ключа з файлу або генерація нового"""
-    # Переконайтеся, що директорія існує
-    os.makedirs('configurations', exist_ok=True)
-    
-    key_file = 'configurations/key.key'
-    if os.path.exists(key_file):
-        with open(key_file, 'rb') as f:
-            return f.read()
-    else:
-        key = Fernet.generate_key()
-        with open(key_file, 'wb') as f:
-            f.write(key)
-        return key
+        """Завантаження ключа з файлу або генерація нового"""
+        # Переконайтеся, що директорія існує
+        os.makedirs('configurations', exist_ok=True)
+        
+        key_file = 'configurations/key.key'
+        try:
+            if os.path.exists(key_file):
+                with open(key_file, 'rb') as f:
+                    return f.read()
+            else:
+                key = Fernet.generate_key()
+                with open(key_file, 'wb') as f:
+                    f.write(key)
+                return key
+        except Exception as e:
+            logging.error(f"Error loading or generating key: {e}")
+            raise  # Пробросити виключення далі
 
     def add_configuration(self, name, config_data):
         """Додавання нової конфігурації"""
@@ -71,9 +75,12 @@ def create_directories():
 
 # Збереження конфігурацій у файл
 def save_configurations_to_file(manager, filename='configurations/configs.json'):
-    with open(filename, 'w') as f:
-        json.dump(manager.configurations, f)
-    logging.info("Configurations saved to file.")
+    try:
+        with open(filename, 'w') as f:
+            json.dump(manager.configurations, f)
+        logging.info("Configurations saved to file.")
+    except Exception as e:
+        logging.error(f"Error saving configurations to file: {e}")
 
 # Завантаження конфігурацій з файлу
 def load_configurations_from_file(manager, filename='configurations/configs.json'):
@@ -86,6 +93,9 @@ def load_configurations_from_file(manager, filename='configurations/configs.json
         except json.JSONDecodeError as e:
             logging.error(f"Error loading configurations from file: {e}")
             print("Error: The configuration file is not valid JSON or is empty.")
+        except Exception as e:
+            logging.error(f"Error opening configuration file: {e}")
+            print("Error: Could not open the configuration file.")
     else:
         logging.warning("Configuration file does not exist.")
         print("Warning: Configuration file not found.")
@@ -135,11 +145,14 @@ def search_accounts(partial_name):
 
 # Функція для збереження логів у файли
 def save_log_to_file(message):
-    with open(LOG_TXT_FILE, 'a') as txt_file:
-        txt_file.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
-    with open(LOG_CSV_FILE, 'a', newline='') as csv_file:
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerow([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), message])
+    try:
+        with open(LOG_TXT_FILE, 'a') as txt_file:
+            txt_file.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
+        with open(LOG_CSV_FILE, 'a', newline='') as csv_file:
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerow([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), message])
+    except Exception as e:
+        logging.error(f"Error saving log to file: {e}")
 
 # Функція для журналу подій
 def log_event(log_text, message):
