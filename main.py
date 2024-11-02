@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from datetime import datetime
 from tkcalendar import DateEntry
+import tray
 from utils import (
     log_event, schedule_block, get_scheduled_tasks,
     clean_completed_tasks, search_accounts, set_ldap_config,
@@ -20,7 +21,12 @@ def on_closing():
 
 # Реєстрація обробника події закриття вікна
 root = tk.Tk()
+tray.set_root_window(root)  # Встановлюємо root у tray.py
 root.protocol("WM_DELETE_WINDOW", on_closing)
+
+# Додайте текстове поле для логів
+log_text = tk.Text(root, state='disabled', width=50, height=10)  # Додаємо текстове поле для логів
+log_text.pack(pady=5)
 
 # Функція для оновлення списку імен акаунтів
 def update_account_names(event=None):
@@ -75,7 +81,7 @@ def schedule_block_account():
     if account_name and scheduled_time_str:
         try:
             scheduled_time = datetime.strptime(f"{scheduled_date} {scheduled_time_str}", '%Y-%m-%d %H:%M')
-            if schedule_block(account_name, scheduled_time):
+            if schedule_block(account_name, scheduled_time, log_text):  # Передаємо log_text
                 messagebox.showinfo("Scheduled", f"Account '{account_name}' will be blocked at {scheduled_time}.")
                 update_scheduled_tasks()
             else:
@@ -84,6 +90,7 @@ def schedule_block_account():
             messagebox.showwarning("Warning", "Please enter a valid time format (HH:MM).")
     else:
         messagebox.showwarning("Warning", "Please enter an account name and a valid time.")
+
 
 # Створення директорій
 create_directories()

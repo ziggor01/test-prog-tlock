@@ -4,6 +4,18 @@ from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import threading
 
+# Глобальна змінна для головного вікна
+root = None
+
+def set_root_window(window):
+    global root
+    root = window
+
+def hide_window():
+    global root
+    if root is not None:
+        root.withdraw()  # Приховує головне вікно
+
 def create_image():
     """Створення зображення для іконки в треї."""
     image = Image.new('RGB', (64, 64), color=(0, 128, 255))  # блакитний фон іконки
