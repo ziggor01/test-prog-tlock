@@ -1,5 +1,3 @@
-# main.py
-
 import tkinter as tk
 from tkinter import messagebox, ttk
 from datetime import datetime
@@ -10,37 +8,19 @@ from utils import (
     ConfigurationManager, create_directories, load_configurations_from_file,
     save_configurations_to_file
 )
-from pystray import Icon, Menu, MenuItem
-from PIL import Image, ImageDraw
-import threading
-import os
-import logging
+from tray import hide_window  # Імпорт функцій з tray.py
 
 # Глобальні змінні
 task_listbox = None  # Змінна для зберігання Listbox
 config_manager = ConfigurationManager()  # Ініціалізація менеджера конфігурацій
 
-# Функція для створення іконки для трея
-def create_image():
-    image = Image.new('RGB', (64, 64), color=(0, 128, 255))  # блакитний фон іконки
-    d = ImageDraw.Draw(image)
-    d.rectangle((10, 10, 54, 54), fill=(255, 255, 0))  # жовтий квадрат
-    return image
+# Функція для обробки закриття вікна
+def on_closing():
+    hide_window()  # Сховати вікно замість закриття
 
-# Функція для виходу з програми через меню трея
-def on_exit(icon, item):
-    icon.stop()
-    root.quit()
-
-# Налаштування іконки для трея
-def setup_tray():
-    icon = Icon("MyApp", create_image(), menu=Menu(MenuItem("Вийти", on_exit)))
-    icon.run()
-
-# Функція для згорнення вікна в трей
-def hide_window():
-    root.withdraw()  # Приховує головне вікно
-    threading.Thread(target=setup_tray).start()  # Запускає трей у фоновому потоці
+# Реєстрація обробника події закриття вікна
+root = tk.Tk()
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 # Функція для оновлення списку імен акаунтів
 def update_account_names(event=None):
@@ -95,7 +75,7 @@ def schedule_block_account():
     if account_name and scheduled_time_str:
         try:
             scheduled_time = datetime.strptime(f"{scheduled_date} {scheduled_time_str}", '%Y-%m-%d %H:%M')
-            if schedule_block(account_name, scheduled_time, log_text):
+            if schedule_block(account_name, scheduled_time):
                 messagebox.showinfo("Scheduled", f"Account '{account_name}' will be blocked at {scheduled_time}.")
                 update_scheduled_tasks()
             else:
@@ -105,18 +85,15 @@ def schedule_block_account():
     else:
         messagebox.showwarning("Warning", "Please enter an account name and a valid time.")
 
-# Створення головного вікна
-root = tk.Tk()
-
-# Встановлення іконки для вікна та панелі завдань
-root.iconbitmap("app_icon.ico")
-root.title("Schedule Block AD Account")
-
 # Створення директорій
 create_directories()
 
 # Завантаження конфігурацій
 load_configurations_from_file(config_manager)
+
+# Встановлення іконки для вікна та панелі завдань
+root.iconbitmap("app_icon.ico")
+root.title("Schedule Block AD Account")
 
 # Поля для введення налаштувань LDAP
 tk.Label(root, text="LDAP Configuration").pack(pady=5)
@@ -167,24 +144,12 @@ block_button.pack(pady=20)
 minimize_button = tk.Button(root, text="Згорнути в трей", command=hide_window)
 minimize_button.pack(pady=5)
 
-# Поле для відображення журналу подій
-tk.Label(root, text="Event Log:").pack(pady=5)
-log_text = tk.Text(root, width=50, height=15)
-log_text.pack(pady=5)
-
-# Додайте Listbox для відображення запланованих завдань
-tk.Label(root, text="Scheduled Tasks:").pack(pady=5)
-task_listbox = tk.Listbox(root, width=50, height=10)  # Додаємо Listbox до інтерфейсу
+# Список запланованих завдань
+task_listbox = tk.Listbox(root, width=50)
 task_listbox.pack(pady=5)
 
-# Запуск оновлення списку завдань
+# Оновлення списку запланованих завдань
 refresh_scheduled_tasks()
 
-# Логування подій
-logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
-
-# Запуск головного циклу програми
+# Запуск головного циклу
 root.mainloop()
-
-# Збереження конфігурацій перед виходом
-save_configurations_to_file(config_manager)

@@ -1,6 +1,7 @@
 #*.ico
 *.txt
 *.csv
+*.key
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

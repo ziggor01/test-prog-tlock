@@ -20,16 +20,19 @@ class ConfigurationManager:
         self.key = self.load_or_generate_key()  # Завантаження ключа або генерація нового
 
     def load_or_generate_key(self):
-        """Завантаження ключа з файлу або генерація нового"""
-        key_file = 'configurations/key.key'
-        if os.path.exists(key_file):
-            with open(key_file, 'rb') as f:
-                return f.read()
-        else:
-            key = Fernet.generate_key()
-            with open(key_file, 'wb') as f:
-                f.write(key)
-            return key
+    """Завантаження ключа з файлу або генерація нового"""
+    # Переконайтеся, що директорія існує
+    os.makedirs('configurations', exist_ok=True)
+    
+    key_file = 'configurations/key.key'
+    if os.path.exists(key_file):
+        with open(key_file, 'rb') as f:
+            return f.read()
+    else:
+        key = Fernet.generate_key()
+        with open(key_file, 'wb') as f:
+            f.write(key)
+        return key
 
     def add_configuration(self, name, config_data):
         """Додавання нової конфігурації"""
